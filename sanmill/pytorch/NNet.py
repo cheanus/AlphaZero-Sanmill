@@ -14,18 +14,9 @@ import torch.optim as optim
 
 from .SanmillNNet import SanmillNNet as snnet
 
-args = dotdict({
-    'lr': 0.001,
-    'dropout': 0.5,
-    'epochs': 10,
-    'batch_size': 64,
-    'cuda': torch.cuda.is_available(),
-    'num_channels': 512,
-})
-
-
 class NNetWrapper(NeuralNet):
-    def __init__(self, game):
+    def __init__(self, game, args):
+        self.args = args
         self.nnet = snnet(game, args)
         self.board_x, self.board_y = game.getBoardSize()
 
@@ -36,19 +27,19 @@ class NNetWrapper(NeuralNet):
         """
         examples: list of examples, each example is of form (board, pi, v, period)
         """
-        optimizer = optim.Adam(self.nnet.parameters(), lr=args.lr)
+        optimizer = optim.Adam(self.nnet.parameters(), lr=self.args.lr)
 
-        for epoch in range(args.epochs):
+        for epoch in range(self.args.epochs):
             print('EPOCH ::: ' + str(epoch + 1))
             self.nnet.train()
             pi_losses = AverageMeter()
             v_losses = AverageMeter()
 
-            batch_count = int(len(examples) / args.batch_size)
+            batch_count = int(len(examples) / self.args.batch_size)
 
             t = tqdm(range(batch_count), desc='Training Net')
             for _ in t:
-                sample_ids = np.random.randint(len(examples), size=args.batch_size)
+                sample_ids = np.random.randint(len(examples), size=self.args.batch_size)
                 boards, pis, vs, periods = list(zip(*[examples[i] for i in sample_ids]))
                 boards = torch.tensor(boards, dtype=torch.float32)
                 target_pis = torch.tensor(pis, dtype=torch.float32)
@@ -56,7 +47,7 @@ class NNetWrapper(NeuralNet):
                 periods = torch.tensor(periods, dtype=torch.int8)
 
                 # predict
-                if args.cuda:
+                if self.args.cuda:
                     # boards, target_pis, target_vs = boards.contiguous().cuda(), target_pis.contiguous().cuda(), target_vs.contiguous().cuda()
                     boards = boards.contiguous().cuda()
                     target_pis = target_pis.contiguous().cuda()
@@ -94,7 +85,7 @@ class NNetWrapper(NeuralNet):
         # preparing input
         board = torch.tensor(board, dtype=torch.float)
         period = torch.tensor(period, dtype=torch.int8)
-        if args.cuda: board = board.contiguous().cuda()
+        if self.args.cuda: board = board.contiguous().cuda()
         board = board.view(1, self.board_x, self.board_y)
         self.nnet.eval()
         with torch.no_grad():
@@ -129,6 +120,6 @@ class NNetWrapper(NeuralNet):
             # raise ("No model in path {}".format(filepath))
             print("No model in path {}".format(filepath))
             exit(1)
-        map_location = None if args.cuda else 'cpu'
+        map_location = None if self.args.cuda else 'cpu'
         checkpoint = torch.load(filepath, map_location=map_location)
         self.nnet.load_state_dict(checkpoint['state_dict'])

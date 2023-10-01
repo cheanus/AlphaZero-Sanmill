@@ -1,5 +1,5 @@
 import logging
-
+import torch
 import coloredlogs
 
 from Coach import Coach
@@ -26,6 +26,12 @@ args = dotdict({
     'load_folder_file': ('/dev/models/8x100x50','best.pth.tar'),
     'numItersForTrainExamplesHistory': 20,
 
+    'lr': 0.001,
+    'dropout': 0.5,
+    'epochs': 10,
+    'batch_size': 64,
+    'cuda': torch.cuda.is_available(),
+    'num_channels': 512,
 })
 
 
@@ -34,7 +40,7 @@ def main():
     g = Game()
 
     log.info('Loading %s...', nn.__name__)
-    nnet = nn(g)
+    nnet = nn(g, args)
 
     if args.load_model:
         log.info('Loading checkpoint "%s/%s"...', args.load_folder_file[0], args.load_folder_file[1])
