@@ -97,7 +97,7 @@ class SanmillGame():
         b = deepcopy(board)
         move = b.get_move_from_action(action)
         b.execute_move(move, player)
-        if board.period == 3:
+        if b.period == 3:
             return (b, player)
         else:
             return (b, -player)
@@ -202,3 +202,20 @@ class SanmillGame():
         """
         tail = str(board.period) + str(board.put_pieces>=self.num_draw)
         return np.array(board.pieces).tobytes()+tail.encode('utf-8')
+
+    @staticmethod
+    def display(board):
+        n = 7
+        print("   ", end="")
+        for y in range(n):
+            print(y, end=" ")
+        print("")
+        print("-----------------------")
+        for y in range(n):
+            print(y, "|", end="")    # print the row #
+            for x in range(n):
+                piece = board.pieces[y][x]    # get the piece to print
+                print(SanmillGame.square_content[piece], end=" ")
+            print("|")
+
+        print("-----------------------")

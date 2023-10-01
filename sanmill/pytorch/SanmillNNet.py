@@ -33,7 +33,7 @@ class Branch(nn.Module):
         """
         s = self.main(s) + self.identity(s)  # batch_size x num_channels
         pi = self.pi(s)  # batch_size x 24*24+1
-        v = self.v(s)
+        v = self.v(s)  # batch_size x 1
         return pi, v
 
 

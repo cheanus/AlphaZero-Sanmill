@@ -199,7 +199,7 @@ class Board():
                 return
         if self.put_pieces >= 18:
             self.period = 1
-            if self.count(-1) == 3 or self.count(1) == 3:
+            if self.count(-1) <= 3 or self.count(1) <= 3:
                 self.period = 2
     
     def line3(self, move, player):
