@@ -17,6 +17,7 @@ class Branch(nn.Module):
             nn.ReLU(),
             nn.Dropout(args.dropout),
         )
+        self.identity = nn.Linear(512*9, args.num_channels)
         self.pi = nn.Sequential(
             nn.Linear(args.num_channels, 24*24+1),
             nn.LogSoftmax(dim=1),
@@ -30,7 +31,7 @@ class Branch(nn.Module):
         """
         s: batch_size x 512*9
         """
-        s = self.main(s)  # batch_size x num_channels
+        s = self.main(s) + self.identity(s)  # batch_size x num_channels
         pi = self.pi(s)  # batch_size x 24*24+1
         v = self.v(s)
         return pi, v
