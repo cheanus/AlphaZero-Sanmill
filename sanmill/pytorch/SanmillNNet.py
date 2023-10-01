@@ -46,16 +46,16 @@ class SanmillNNet(nn.Module):
         super(SanmillNNet, self).__init__()
         self.main = nn.Sequential(
             nn.Conv2d(1, args.num_channels//4, 3, stride=1, padding=1),
-            nn.InstanceNorm2d(args.num_channels//4),
+            nn.BatchNorm2d(args.num_channels//4),
             nn.ReLU(),
             nn.Conv2d(args.num_channels//4, args.num_channels//4, 3, stride=1, padding=1),
-            nn.InstanceNorm2d(args.num_channels//4),
+            nn.BatchNorm2d(args.num_channels//4),
             nn.ReLU(),
             nn.Conv2d(args.num_channels//4, args.num_channels//2, 3, stride=1),
-            nn.InstanceNorm2d(args.num_channels//2),
+            nn.BatchNorm2d(args.num_channels//2),
             nn.ReLU(),
             nn.Conv2d(args.num_channels//2, args.num_channels, 3, stride=1),
-            nn.InstanceNorm2d(args.num_channels),
+            nn.BatchNorm2d(args.num_channels),
             nn.ReLU(),
         )
         self.branch = nn.ModuleList([Branch(args) for _ in range(4)])

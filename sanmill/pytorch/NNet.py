@@ -61,7 +61,7 @@ class NNetWrapper(NeuralNet):
                     pi, v = self.nnet(boards[periods==i], i)
                     out_pi[periods==i] = pi.view(-1, target_pis.size(1))
                     out_v[periods==i] = v.view(-1)
-                l_pi = self.loss_pi(target_pis, out_pi, periods)
+                l_pi = self.loss_pi(target_pis, out_pi)
                 l_v = self.loss_v(target_vs, out_v)
                 total_loss = l_pi + l_v
 
@@ -94,10 +94,16 @@ class NNetWrapper(NeuralNet):
         # print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
         return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
 
-    def loss_pi(self, targets, outputs, periods):
-        # mask = torch.ones_like(targets)
-        # mask[(periods==0)|(periods==3), 24:-1] = 0
-        return -torch.sum(targets * outputs) / targets.size()[0]
+    def loss_pi(self, targets, outputs):
+        # return -torch.sum(targets * outputs) / targets.size()[0]
+        alpha = 0.25
+
+        positive = (targets>1e-3).float()
+
+        alpha_w = alpha * positive + (1-alpha) * positive
+        p_t = positive * torch.exp(outputs) + (1-positive) * (1-torch.exp(outputs))
+        focal_loss = -torch.sum(alpha_w * targets * (1-p_t)**2 * torch.log(p_t)) / targets.size()[0]
+        return focal_loss
 
     def loss_v(self, targets, outputs):
         return torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
