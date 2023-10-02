@@ -142,7 +142,7 @@ class SanmillGame():
         elif board.period == 2 and board.count(player) < 3:
             return -1
         elif board.put_pieces >= self.num_draw:
-            return 1e-5
+            return 0.1*(board.count(player)-board.count(-player))+1e-4
         else:
             return 0
 

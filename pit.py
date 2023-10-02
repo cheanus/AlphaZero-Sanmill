@@ -14,7 +14,7 @@ use this script to play any two agents against each other, or play manually with
 any agent.
 """
 
-human_vs_cpu = True
+human_vs_cpu = False
 
 g = SanmillGame()
 
@@ -34,8 +34,8 @@ args = dotdict({
 
 # nnet players
 n1 = NNet(g, args)
-n1.load_checkpoint('./temp','temp.pth.tar')
-args1 = dotdict({'numMCTSSims': 50, 'cpuct':1.0})
+n1.load_checkpoint('./temp','temp2.pth.tar')
+args1 = dotdict({'numMCTSSims': 100, 'cpuct':1.0})
 mcts1 = MCTS(g, n1, args1)
 n1p = lambda x: np.argmax(mcts1.getActionProb(x, temp=0))
 
@@ -43,8 +43,8 @@ if human_vs_cpu:
     player2 = hp
 else:
     n2 = NNet(g, args)
-    n2.load_checkpoint('./pretrained_models/othello/pytorch/', '8x8_100checkpoints_best.pth.tar')
-    args2 = dotdict({'numMCTSSims': 50, 'cpuct': 1.0})
+    n2.load_checkpoint('./temp', 'temp.pth.tar')
+    args2 = dotdict({'numMCTSSims': 100, 'cpuct': 1.0})
     mcts2 = MCTS(g, n2, args2)
     n2p = lambda x: np.argmax(mcts2.getActionProb(x, temp=0))
 

@@ -39,7 +39,7 @@ class NNetWrapper(NeuralNet):
 
             t = tqdm(range(batch_count), desc='Training Net')
             for _ in t:
-                sample_ids = np.random.randint(len(examples), size=self.args.batch_size)
+                sample_ids = np.random.choice(len(examples), size=self.args.batch_size, replace=False)
                 boards, pis, vs, periods = list(zip(*[examples[i] for i in sample_ids]))
                 boards = torch.tensor(boards, dtype=torch.float32)
                 target_pis = torch.tensor(pis, dtype=torch.float32)
@@ -95,15 +95,15 @@ class NNetWrapper(NeuralNet):
         return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
 
     def loss_pi(self, targets, outputs):
-        # return -torch.sum(targets * outputs) / targets.size()[0]
-        alpha = 0.25
+        return -torch.sum(targets * outputs) / targets.size()[0]
+        # alpha = 0.25
 
-        positive = (targets>1e-3).float()
+        # positive = (targets>1e-3).float()
 
-        alpha_w = alpha * positive + (1-alpha) * positive
-        p_t = positive * torch.exp(outputs) + (1-positive) * (1-torch.exp(outputs))
-        focal_loss = -torch.sum(alpha_w * targets * (1-p_t)**2 * torch.log(p_t)) / targets.size()[0]
-        return focal_loss
+        # alpha_w = alpha * positive + (1-alpha) * positive
+        # p_t = positive * torch.exp(outputs) + (1-positive) * (1-torch.exp(outputs))
+        # focal_loss = -torch.sum(alpha_w * targets * (1-p_t)**2 * torch.log(p_t)) / targets.size()[0]
+        # return focal_loss
 
     def loss_v(self, targets, outputs):
         return torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]

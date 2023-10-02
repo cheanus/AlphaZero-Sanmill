@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 coloredlogs.install(level='INFO')  # Change this to DEBUG to see more info.
 
 args = dotdict({
-    'numIters': 100,
+    'numIters': 50,
     'numEps': 50,              # Number of complete self-play games to simulate during a new iteration.
     'tempThreshold': 80,        #
     'updateThreshold': 0.6,     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
@@ -26,10 +26,10 @@ args = dotdict({
     'load_folder_file': ('/dev/models/8x100x50','best.pth.tar'),
     'numItersForTrainExamplesHistory': 20,
 
-    'lr': 0.002,
+    'lr': 0.001,
     'dropout': 0.5,
     'epochs': 10,
-    'batch_size': 128,
+    'batch_size': 64,
     'cuda': torch.cuda.is_available(),
     'num_channels': 512,
 })

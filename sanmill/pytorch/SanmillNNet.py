@@ -12,18 +12,27 @@ class Branch(nn.Module):
             nn.LayerNorm(args.num_channels*2),
             nn.ReLU(),
             nn.Dropout(args.dropout),
-            nn.Linear(args.num_channels*2, args.num_channels),
-            nn.LayerNorm(args.num_channels),
+            nn.Linear(args.num_channels*2, int(args.num_channels*1.5)),
+            nn.LayerNorm(int(args.num_channels*1.5)),
             nn.ReLU(),
             nn.Dropout(args.dropout),
         )
-        self.identity = nn.Linear(512*9, args.num_channels)
+        self.main_identity = nn.Linear(512*9, int(args.num_channels*1.5))
         self.pi = nn.Sequential(
-            nn.Linear(args.num_channels, 24*24+1),
+            nn.Linear(int(args.num_channels*1.5), int(args.num_channels*1.5)),
+            nn.LayerNorm(int(args.num_channels*1.5)),
+            nn.ReLU(),
+            nn.Dropout(args.dropout),
+            nn.Linear(int(args.num_channels*1.5), 24*24+1),
+            # nn.LayerNorm(24*24+1),
             nn.LogSoftmax(dim=1),
         )
         self.v = nn.Sequential(
-            nn.Linear(args.num_channels, 1),
+            nn.Linear(int(args.num_channels*1.5), args.num_channels//2),
+            nn.LayerNorm(args.num_channels//2),
+            nn.ReLU(),
+            nn.Dropout(),
+            nn.Linear(args.num_channels//2, 1),
             nn.Tanh(),
         )
 
@@ -31,7 +40,7 @@ class Branch(nn.Module):
         """
         s: batch_size x 512*9
         """
-        s = self.main(s) + self.identity(s)  # batch_size x num_channels
+        s = self.main(s) + self.main_identity(s)  # batch_size x num_channels
         pi = self.pi(s)  # batch_size x 24*24+1
         v = self.v(s)  # batch_size x 1
         return pi, v
