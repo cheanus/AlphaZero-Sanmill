@@ -124,7 +124,7 @@ class SanmillGame():
             valids[action]=1
         return np.array(valids)
 
-    def getGameEnded(self, board, player):
+    def getGameEnded(self, board, player, is_play_game=False):
         """
         Input:
             board: current board
@@ -138,11 +138,11 @@ class SanmillGame():
         if board.period in [0, 3]:
             return 0
         elif not board.has_legal_moves(player):
-            return -1
+            return -1*(1-board.put_pieces/self.num_draw) if is_play_game else -1
         elif board.period == 2 and board.count(player) < 3:
-            return -1
+            return -1*(1-board.put_pieces/self.num_draw) if is_play_game else -1
         elif board.put_pieces >= self.num_draw:
-            return 0.1*(board.count(player)-board.count(-player))+1e-4
+            return 0.07*(board.count(player)-board.count(-player))+1e-4 if is_play_game else 1e-4
         else:
             return 0
 
