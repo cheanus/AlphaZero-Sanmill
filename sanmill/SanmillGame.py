@@ -1,7 +1,6 @@
 from __future__ import print_function
 import sys
 sys.path.append('..')
-from Game import Game
 from .SanmillLogic import Board
 import numpy as np
 from copy import deepcopy
@@ -138,11 +137,11 @@ class SanmillGame():
         if board.period in [0, 3]:
             return 0
         elif not board.has_legal_moves(player):
-            return -1*(1-board.put_pieces/self.num_draw) if is_play_game else -1
+            return -1 if is_play_game else -1*(1-board.put_pieces/self.num_draw)
         elif board.period == 2 and board.count(player) < 3:
-            return -1*(1-board.put_pieces/self.num_draw) if is_play_game else -1
+            return -1 if is_play_game else -1*(1-board.put_pieces/self.num_draw)
         elif board.put_pieces >= self.num_draw:
-            return 0.07*(board.count(player)-board.count(-player))+1e-4 if is_play_game else 1e-4
+            return 1e-4 if is_play_game else 0.07*(board.count(player)-board.count(-player))+1e-4
         else:
             return 0
 
