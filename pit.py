@@ -50,4 +50,4 @@ if __name__ == '__main__':
 
     arena_args = [n1p, player2, g, g.display]
 
-    playGames(arena_args, 2, verbose=True)
+    print(playGames(arena_args, 2, verbose=True))

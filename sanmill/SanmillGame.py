@@ -142,6 +142,10 @@ class SanmillGame():
             return -1 if is_play_game else -1*(1-board.put_pieces/self.num_draw)
         elif board.put_pieces >= self.num_draw:
             return 1e-4 if is_play_game else 0.07*(board.count(player)-board.count(-player))+1e-4
+        elif not board.has_legal_moves(-player):
+            return 1 if is_play_game else 1-board.put_pieces/self.num_draw
+        elif board.period == 2 and board.count(-player) < 3:
+            return 1 if is_play_game else 1-board.put_pieces/self.num_draw
         else:
             return 0
 
