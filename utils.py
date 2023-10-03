@@ -19,4 +19,6 @@ class AverageMeter(object):
 
 class dotdict(dict):
     def __getattr__(self, name):
+        if name.startswith('__'):
+            return super().__getattr__(name)
         return self[name]

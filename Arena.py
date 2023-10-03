@@ -1,4 +1,6 @@
 import logging
+import numpy as np
+import torch
 
 from tqdm import tqdm
 
@@ -13,7 +15,7 @@ class Arena():
     def __init__(self, player1, player2, game, display=None):
         """
         Input:
-            player 1,2: two functions that takes board as input, return action
+            player 1,2: two mcts objects that takes board as input, return action
             game: Game object
             display: a function that takes board as input and prints it (e.g.
                      display in othello/OthelloGame). Is necessary for verbose
@@ -47,7 +49,8 @@ class Arena():
                 assert self.display
                 print("Turn ", str(it), "Player ", str(curPlayer), "Period ", board.period)
                 self.display(board)
-            action = players[curPlayer + 1](self.game.getCanonicalForm(board, curPlayer))
+            pi = players[curPlayer + 1].getActionProb(self.game.getCanonicalForm(board, curPlayer), 0)
+            action = np.argmax(pi)
 
             valids = self.game.getValidMoves(self.game.getCanonicalForm(board, curPlayer), 1)
 
@@ -62,39 +65,50 @@ class Arena():
             self.display(board)
         return curPlayer * self.game.getGameEnded(board, curPlayer, is_play_game=True)
 
-    def playGames(self, num, verbose=False):
-        """
-        Plays num games in which player1 starts num/2 games and player2 starts
-        num/2 games.
+def arena_wrapper(arena_args, verbose, i):
+    log = logging.getLogger(__name__)
+    arena = Arena(*arena_args)
+    print(f'Start fighting {i}...')
+    reselts = arena.playGame(verbose=verbose)
+    print(f'End fighting {i}, result {reselts}')
+    return reselts
 
-        Returns:
-            oneWon: games won by player1
-            twoWon: games won by player2
-            draws:  games won by nobody
-        """
+def error_callback(error):
+    print(f"Error info: {error}")
 
-        num = int(num / 2)
-        oneWon = 0
-        twoWon = 0
-        draws = 0
-        for _ in tqdm(range(num), desc="Arena.playGames (1)"):
-            gameResult = self.playGame(verbose=verbose)
-            if gameResult == 1:
-                oneWon += 1
-            elif gameResult == -1:
-                twoWon += 1
-            else:
-                draws += 1
+def playGames(arena_args, num, verbose=False):
+    """
+    Plays num games in which player1 starts num/2 games and player2 starts
+    num/2 games.
 
-        self.player1, self.player2 = self.player2, self.player1
+    Returns:
+        oneWon: games won by player1
+        twoWon: games won by player2
+        draws:  games won by nobody
+    """
 
-        for _ in tqdm(range(num), desc="Arena.playGames (2)"):
-            gameResult = self.playGame(verbose=verbose)
-            if gameResult == -1:
-                oneWon += 1
-            elif gameResult == 1:
-                twoWon += 1
-            else:
-                draws += 1
+    num = int(num / 2)
+    oneWon = 0
+    twoWon = 0
+    draws = 0
 
-        return oneWon, twoWon, draws
+    pool = torch.multiprocessing.get_context('spawn').Pool(2)
+    pools = []
+    for i in range(num):
+        pools.append(pool.apply_async(func=arena_wrapper, args=(arena_args, verbose, i), error_callback=error_callback))
+    arena_args[0], arena_args[1] = arena_args[1], arena_args[0]
+    for i in range(num):
+        pools.append(pool.apply_async(func=arena_wrapper, args=(arena_args, verbose, i), error_callback=error_callback))
+    pool.close()
+    pool.join()
+
+    print(pools)
+    for res in pools:
+        gameResult = res.get()
+        if gameResult == 1:
+            oneWon += 1
+        elif gameResult == -1:
+            twoWon += 1
+        else:
+            draws += 1
+    return oneWon, twoWon, draws
