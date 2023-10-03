@@ -9,7 +9,7 @@ from random import shuffle
 import numpy as np
 from tqdm import tqdm
 
-from Arena import Arena
+from Arena import Arena, playGames
 from MCTS import MCTS
 
 log = logging.getLogger(__name__)
@@ -116,9 +116,8 @@ class Coach():
             nmcts = MCTS(self.game, self.nnet, self.args)
 
             log.info('PITTING AGAINST PREVIOUS VERSION')
-            arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
-                          lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.game)
-            pwins, nwins, draws = arena.playGames(self.args.arenaCompare)
+            arena_args = [pmcts, nmcts, self.game, None]
+            pwins, nwins, draws = playGames(arena_args, self.args.arenaCompare, num_workers=self.args.num_workers)
 
             log.info('NEW/PREV WINS : %f / %f ; DRAWS : %f' % (nwins, pwins, draws))
             if pwins + nwins == 0 or float(nwins) / (pwins + nwins) < self.args.updateThreshold:

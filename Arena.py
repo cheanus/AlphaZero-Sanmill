@@ -78,7 +78,7 @@ def arena_wrapper(arena_args, verbose, i):
 def error_callback(error):
     print(f"Error info: {error}")
 
-def playGames(arena_args, num, verbose=False):
+def playGames(arena_args, num, verbose=False, num_workers=2):
     """
     Plays num games in which player1 starts num/2 games and player2 starts
     num/2 games.
@@ -94,9 +94,12 @@ def playGames(arena_args, num, verbose=False):
     twoWon = 0
     draws = 0
     if verbose:
-        arena_wrapper(arena_args, verbose, 0)
+        for i in range(num):
+            arena_wrapper(arena_args, verbose, 2*i)
+            arena_args[0], arena_args[1] = arena_args[1], arena_args[0]
+            arena_wrapper(arena_args, verbose, 2*i+1)
     else:
-        pool = torch.multiprocessing.get_context('spawn').Pool(2)
+        pool = torch.multiprocessing.get_context('spawn').Pool(num_workers)
         pools = []
         for i in range(num):
             pools.append(pool.apply_async(func=arena_wrapper, args=(arena_args, verbose, i), error_callback=error_callback))
@@ -106,13 +109,20 @@ def playGames(arena_args, num, verbose=False):
         pool.close()
         pool.join()
 
-        print(pools)
-        for res in pools:
+        for i, res in enumerate(pools):
             gameResult = res.get()
-            if gameResult == 1:
-                oneWon += 1
-            elif gameResult == -1:
-                twoWon += 1
+            if i < num:
+                if gameResult == 1:
+                    oneWon += 1
+                elif gameResult == -1:
+                    twoWon += 1
+                else:
+                    draws += 1
             else:
-                draws += 1
+                if gameResult == -1:
+                    oneWon += 1
+                elif gameResult == 1:
+                    twoWon += 1
+                else:
+                    draws += 1
         return oneWon, twoWon, draws
