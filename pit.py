@@ -13,14 +13,14 @@ use this script to play any two agents against each other, or play manually with
 any agent.
 """
 if __name__ == '__main__':
-    human_vs_cpu = False
+    human_vs_cpu = True
 
     g = SanmillGame()
 
     # all players
-    rp = RandomPlayer(g).play
-    gp = GreedySanmillPlayer(g).play
-    hp = HumanSanmillPlayer(g).play
+    # rp = RandomPlayer(g).play
+    # gp = GreedySanmillPlayer(g).play
+    hp = HumanSanmillPlayer(g)
 
     args = dotdict({
         'lr': 0.002,
@@ -42,15 +42,16 @@ if __name__ == '__main__':
 
     if human_vs_cpu:
         player2 = hp
+        display = g.display
     else:
         n2 = NNet(g, args)
         # n2.load_checkpoint('./temp', 'checkpoint_1.pth.tar')
         args2 = dotdict({'numMCTSSims': 100, 'cpuct': 1.0})
         mcts2 = MCTS(g, n2, args2)
         n2p = mcts2
-
         player2 = n2p  # Player 2 is neural network if it's cpu vs cpu.
+        display = None
 
-    arena_args = [n1p, player2, g]
+    arena_args = [n1p, player2, g, display]
 
-    playGames(arena_args, 12, verbose=False)
+    playGames(arena_args, 12, verbose=True)

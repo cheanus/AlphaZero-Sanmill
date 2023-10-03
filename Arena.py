@@ -1,8 +1,8 @@
 import logging
 import numpy as np
 import torch
-
 from tqdm import tqdm
+from MCTS import MCTS
 
 log = logging.getLogger(__name__)
 
@@ -49,8 +49,11 @@ class Arena():
                 assert self.display
                 print("Turn ", str(it), "Player ", str(curPlayer), "Period ", board.period)
                 self.display(board)
-            pi = players[curPlayer + 1].getActionProb(self.game.getCanonicalForm(board, curPlayer), 0)
-            action = np.argmax(pi)
+            if type(players[curPlayer + 1]) == MCTS:
+                pi = players[curPlayer + 1].getActionProb(self.game.getCanonicalForm(board, curPlayer), 0)
+                action = np.argmax(pi)
+            else:
+                action = players[curPlayer + 1].play(self.game.getCanonicalForm(board, curPlayer))
 
             valids = self.game.getValidMoves(self.game.getCanonicalForm(board, curPlayer), 1)
 
@@ -66,7 +69,6 @@ class Arena():
         return curPlayer * self.game.getGameEnded(board, curPlayer, is_play_game=True)
 
 def arena_wrapper(arena_args, verbose, i):
-    log = logging.getLogger(__name__)
     arena = Arena(*arena_args)
     print(f'Start fighting {i}...')
     reselts = arena.playGame(verbose=verbose)
@@ -91,24 +93,26 @@ def playGames(arena_args, num, verbose=False):
     oneWon = 0
     twoWon = 0
     draws = 0
+    if verbose:
+        arena_wrapper(arena_args, verbose, 0)
+    else:
+        pool = torch.multiprocessing.get_context('spawn').Pool(2)
+        pools = []
+        for i in range(num):
+            pools.append(pool.apply_async(func=arena_wrapper, args=(arena_args, verbose, i), error_callback=error_callback))
+        arena_args[0], arena_args[1] = arena_args[1], arena_args[0]
+        for i in range(num):
+            pools.append(pool.apply_async(func=arena_wrapper, args=(arena_args, verbose, i), error_callback=error_callback))
+        pool.close()
+        pool.join()
 
-    pool = torch.multiprocessing.get_context('spawn').Pool(2)
-    pools = []
-    for i in range(num):
-        pools.append(pool.apply_async(func=arena_wrapper, args=(arena_args, verbose, i), error_callback=error_callback))
-    arena_args[0], arena_args[1] = arena_args[1], arena_args[0]
-    for i in range(num):
-        pools.append(pool.apply_async(func=arena_wrapper, args=(arena_args, verbose, i), error_callback=error_callback))
-    pool.close()
-    pool.join()
-
-    print(pools)
-    for res in pools:
-        gameResult = res.get()
-        if gameResult == 1:
-            oneWon += 1
-        elif gameResult == -1:
-            twoWon += 1
-        else:
-            draws += 1
-    return oneWon, twoWon, draws
+        print(pools)
+        for res in pools:
+            gameResult = res.get()
+            if gameResult == 1:
+                oneWon += 1
+            elif gameResult == -1:
+                twoWon += 1
+            else:
+                draws += 1
+        return oneWon, twoWon, draws
