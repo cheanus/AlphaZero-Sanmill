@@ -69,6 +69,7 @@ class Arena():
         return curPlayer * self.game.getGameEnded(board, curPlayer, is_play_game=True)
 
 def arena_wrapper(arena_args, verbose, i):
+    np.random.seed()
     arena = Arena(*arena_args)
     print(f'Start fighting {i}...')
     reselts = arena.playGame(verbose=verbose)

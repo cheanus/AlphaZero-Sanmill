@@ -43,7 +43,7 @@ class Branch03(nn.Module):
         s: batch_size x 512*9
         """
         s = self.main(s) + self.main_identity(s)  # batch_size x num_channels
-        pi = torch.zeros((s.size()[0], 24*24)).to(device)
+        pi = torch.ones((s.size()[0], 24*24)).to(device) * -torch.inf
         pi[:,:24] = self.pi(s)  # batch_size x 24
         v = self.v(s)  # batch_size x 1
         return pi, v
@@ -94,7 +94,7 @@ class Branch1(nn.Module):
         s: batch_size x 512*9
         """
         s = self.main(s) + self.main_identity(s)  # batch_size x num_channels
-        pi = torch.zeros((s.size()[0], 24*24),dtype=torch.float).to(device)
+        pi = torch.ones((s.size()[0], 24*24),dtype=torch.float).to(device) * -torch.inf
         pi[:, self.valids] = self.pi(s)
         v = self.v(s)  # batch_size x 1
         return pi, v
