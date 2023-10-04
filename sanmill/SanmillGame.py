@@ -78,7 +78,7 @@ class SanmillGame():
         Returns:
             actionSize: number of all possible actions
         """
-        return 24*24 + 1
+        return 24*24
 
     def getNextState(self, board, player, action):
         """
@@ -91,8 +91,6 @@ class SanmillGame():
             nextBoard: board after applying action
             nextPlayer: player who plays in the next turn (should be -player)
         """
-        if action == 24*24:
-            return (board, -player)
         b = deepcopy(board)
         move = b.get_move_from_action(action)
         b.execute_move(move, player)
@@ -115,9 +113,6 @@ class SanmillGame():
         valids = [0]*self.getActionSize()
         b = deepcopy(board)
         legalMoves = b.get_legal_moves(player)
-        if len(legalMoves)==0:
-            valids[-1]=1
-            return np.array(valids)
         for move in legalMoves:
             action = b.get_action_from_move(move)
             valids[action]=1
@@ -136,16 +131,16 @@ class SanmillGame():
         """
         if board.period in [0, 3]:
             return 0
-        elif not board.has_legal_moves(player):
-            return -1 if is_play_game else -1*(1-board.put_pieces/self.num_draw)
-        elif board.period == 2 and board.count(player) < 3:
-            return -1 if is_play_game else -1*(1-board.put_pieces/self.num_draw)
         elif board.put_pieces >= self.num_draw:
-            return 1e-4 if is_play_game else 0.07*(board.count(player)-board.count(-player))+1e-4
+            return 1e-4
+        elif not board.has_legal_moves(player):
+            return -1
+        elif board.period == 2 and board.count(player) < 3:
+            return -1
         elif not board.has_legal_moves(-player):
-            return 1 if is_play_game else 1-board.put_pieces/self.num_draw
+            return 1
         elif board.period == 2 and board.count(-player) < 3:
-            return 1 if is_play_game else 1-board.put_pieces/self.num_draw
+            return 1
         else:
             return 0
 
@@ -189,8 +184,7 @@ class SanmillGame():
                 if j == 1:
                     newB = np.fliplr(newB)
                 newPi = np.zeros(self.getActionSize())
-                newPi[cache[i*2+j]] = pi[:-1]
-                newPi[-1] = pi[-1]
+                newPi[cache[i*2+j]] = pi
                 symmForms.append((newB.tolist(), newPi.tolist()))
         return symmForms
 

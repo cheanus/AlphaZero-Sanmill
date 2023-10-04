@@ -13,7 +13,7 @@ use this script to play any two agents against each other, or play manually with
 any agent.
 """
 if __name__ == '__main__':
-    human_vs_cpu = True
+    human_vs_cpu = False
 
     g = SanmillGame()
 
@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     # nnet players
     n1 = NNet(g, args)
-    n1.load_checkpoint('./temp','best.pth.tar')
+    n1.load_checkpoint('./temp','checkpoint_3.pth.tar')
     args1 = dotdict({'numMCTSSims': 100, 'cpuct':1.0})
     mcts1 = MCTS(g, n1, args1)
     n1p = mcts1

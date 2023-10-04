@@ -121,6 +121,18 @@ class Board():
                             moves.extend(self.get_adjacent_places(i,j,k, shrink_pieces))
                         
             return moves
+        
+    def get_valids_in_period1(self):
+        shrink_pieces = self.get_shrink_pieces(self.pieces)
+        moves = []
+        for i in range(3):
+            for j in range(3):
+                for k in range(3):
+                    if j == k == 1:
+                        continue
+                    moves.extend(self.get_adjacent_places(i,j,k, shrink_pieces))
+                    
+        return moves
 
     def get_move_from_action(self, action):
         """
