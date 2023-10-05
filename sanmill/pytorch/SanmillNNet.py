@@ -48,9 +48,11 @@ class Branch03(nn.Module):
         v = self.v(s)  # batch_size x 1
         return pi, v
 
-class Branch1(nn.Module):
+class Branch14(nn.Module):
     def __init__(self, args):
-        super(Branch1, self).__init__()
+        super(Branch14, self).__init__()
+        # 4 mean the period that your opponent has 3 pieces on the board,
+        # and you have at least 4 pieces on the board.
         self.args = args
         self.b = Board()
         self.cache_valids()
@@ -169,7 +171,7 @@ class SanmillNNet(nn.Module):
             nn.BatchNorm2d(args.num_channels),
             nn.ReLU(),
         )
-        self.branch = nn.ModuleList([Branch03(args), Branch1(args), Branch2(args), Branch03(args)])
+        self.branch = nn.ModuleList([Branch03(args), Branch14(args), Branch2(args), Branch03(args), Branch14(args)])
 
     def forward(self, s, period):
         """

@@ -59,8 +59,12 @@ class Coach():
 
             pi = self.mcts.getActionProb(canonicalBoard, temp=temp)
             sym = self.game.getSymmetries(canonicalBoard, pi)
+            if canonicalBoard.period == 2 and canonicalBoard.count(1) > 3:
+                real_period = 4
+            else:
+                real_period = canonicalBoard.period
             for b, p in sym:
-                trainExamples.append([b, self.curPlayer, p, canonicalBoard.period])
+                trainExamples.append([b, self.curPlayer, p, real_period])
 
             action = np.random.choice(len(pi), p=pi)
             board, self.curPlayer = self.game.getNextState(board, self.curPlayer, action)

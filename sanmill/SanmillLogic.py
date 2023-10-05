@@ -35,6 +35,9 @@ class Board():
     def __init__(self):
         self.n = 7
         # the period of the game (0, 1, 2, 3)
+        # 0: put pieces
+        # 1: move pieces
+        # 2: move pieces when one player only has 3 pieces left
         self.period = 0
         self.put_pieces = 0
         # Create the empty board array.
