@@ -57,7 +57,7 @@ class NNetWrapper(NeuralNet):
                 # compute output
                 out_pi = torch.zeros(target_pis.size()).cuda()
                 out_v = torch.zeros(target_vs.size()).cuda()
-                for i in range(4):
+                for i in range(5):
                     pi, v = self.nnet(boards[periods==i], i)
                     out_pi[periods==i] = pi.view(-1, target_pis.size(1))
                     out_v[periods==i] = v.view(-1)
