@@ -27,7 +27,7 @@ class Branch03(nn.Module):
             nn.ReLU(),
             nn.Dropout(args.dropout),
             nn.Linear(args.num_channels//2, 24),
-            nn.Softmax(dim=1),
+            nn.LogSoftmax(dim=1),
         )
         self.v = nn.Sequential(
             nn.Linear(args.num_channels, args.num_channels//2),
@@ -43,7 +43,7 @@ class Branch03(nn.Module):
         s: batch_size x 512*9
         """
         s = self.main(s) + self.main_identity(s)  # batch_size x num_channels
-        pi = torch.ones((s.size()[0], 24*24)).to(device) * -torch.inf
+        pi = torch.ones((s.size()[0], 24*24)).to(device) * -1e3
         pi[:,:24] = self.pi(s)  # batch_size x 24
         v = self.v(s)  # batch_size x 1
         return pi, v
@@ -94,7 +94,7 @@ class Branch1(nn.Module):
         s: batch_size x 512*9
         """
         s = self.main(s) + self.main_identity(s)  # batch_size x num_channels
-        pi = torch.ones((s.size()[0], 24*24),dtype=torch.float).to(device) * -torch.inf
+        pi = torch.ones((s.size()[0], 24*24),dtype=torch.float).to(device) * -1e3
         pi[:, self.valids] = self.pi(s)
         v = self.v(s)  # batch_size x 1
         return pi, v
@@ -145,7 +145,7 @@ class Branch2(nn.Module):
         v = self.v(s)  # batch_size x 1
         pi0 = self.pi0(s)  # batch_size x 24
         pi1 = self.pi1(s)  # batch_size x 24
-        pi = torch.matmul(pi0.unsqueeze(2), pi1.unsqueeze(1)).view(-1, 24*24)  # batch_size x 24*24
+        pi = torch.log(torch.matmul(pi0.unsqueeze(2), pi1.unsqueeze(1)).view(-1, 24*24))  # batch_size x 24*24
         return pi, v
 
 class SanmillNNet(nn.Module):
