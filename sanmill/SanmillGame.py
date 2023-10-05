@@ -30,6 +30,9 @@ class SanmillGame():
         self.num_draw = 100
         self.cache_symmetries()
     
+    def reward_w_func(self, put_pieces):
+        return 1 if put_pieces <= 40 else 1-(put_pieces-40)/(self.num_draw-40)
+    
     def cache_symmetries(self):
         place_index = np.zeros((self.n,self.n), dtype=np.int_)
         place_index[Board.allowed_places] = np.arange(24)
@@ -118,7 +121,7 @@ class SanmillGame():
             valids[action]=1
         return np.array(valids)
 
-    def getGameEnded(self, board, player, is_play_game=False):
+    def getGameEnded(self, board, player):
         """
         Input:
             board: current board
@@ -134,13 +137,13 @@ class SanmillGame():
         elif board.put_pieces >= self.num_draw:
             return 1e-4
         elif not board.has_legal_moves(player):
-            return -1
+            return -1 * self.reward_w_func(board.put_pieces)
         elif board.period == 2 and board.count(player) < 3:
-            return -1
+            return -1 * self.reward_w_func(board.put_pieces)
         elif not board.has_legal_moves(-player):
-            return 1
+            return 1 * self.reward_w_func(board.put_pieces)
         elif board.period == 2 and board.count(-player) < 3:
-            return 1
+            return 1 * self.reward_w_func(board.put_pieces)
         else:
             return 0
 

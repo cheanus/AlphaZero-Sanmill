@@ -66,7 +66,7 @@ class Arena():
             assert self.display
             print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))
             self.display(board)
-        return curPlayer * self.game.getGameEnded(board, curPlayer, is_play_game=True)
+        return curPlayer * self.game.getGameEnded(board, curPlayer)
 
 def arena_wrapper(arena_args, verbose, i):
     np.random.seed()
@@ -113,16 +113,16 @@ def playGames(arena_args, num, verbose=False, num_workers=2):
         for i, res in enumerate(pools):
             gameResult = res.get()
             if i < num:
-                if gameResult == 1:
+                if gameResult > 1e-4:
                     oneWon += 1
-                elif gameResult == -1:
+                elif gameResult < -1e-4:
                     twoWon += 1
                 else:
                     draws += 1
             else:
-                if gameResult == -1:
+                if gameResult < -1e-4:
                     oneWon += 1
-                elif gameResult == 1:
+                elif gameResult > 1e-4:
                     twoWon += 1
                 else:
                     draws += 1
