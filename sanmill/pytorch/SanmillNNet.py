@@ -27,6 +27,7 @@ class Branch03(nn.Module):
             nn.ReLU(),
             nn.Dropout(args.dropout),
             nn.Linear(args.num_channels//2, 24),
+            nn.LayerNorm(24),
             nn.LogSoftmax(dim=1),
         )
         self.v = nn.Sequential(
@@ -43,7 +44,7 @@ class Branch03(nn.Module):
         s: batch_size x 512*9
         """
         s = self.main(s) + self.main_identity(s)  # batch_size x num_channels
-        pi = torch.ones((s.size()[0], 24*24)).to(device) * -1e3
+        pi = torch.ones((s.size()[0], 24*24)).to(device) * -10
         pi[:,:24] = self.pi(s)  # batch_size x 24
         v = self.v(s)  # batch_size x 1
         return pi, v
@@ -73,6 +74,7 @@ class Branch14(nn.Module):
             nn.ReLU(),
             nn.Dropout(args.dropout),
             nn.Linear(args.num_channels//2, 80),
+            nn.LayerNorm(80),
             nn.LogSoftmax(dim=1),
         )
         self.v = nn.Sequential(
@@ -96,7 +98,7 @@ class Branch14(nn.Module):
         s: batch_size x 512*9
         """
         s = self.main(s) + self.main_identity(s)  # batch_size x num_channels
-        pi = torch.ones((s.size()[0], 24*24),dtype=torch.float).to(device) * -1e3
+        pi = torch.ones((s.size()[0], 24*24),dtype=torch.float).to(device) * -10
         pi[:, self.valids] = self.pi(s)
         v = self.v(s)  # batch_size x 1
         return pi, v
@@ -121,6 +123,7 @@ class Branch2(nn.Module):
             nn.ReLU(),
             nn.Dropout(args.dropout),
             nn.Linear(args.num_channels//2, 24),
+            nn.LayerNorm(24),
             nn.Softmax(dim=1),
         )
         self.pi1 = nn.Sequential(
@@ -129,6 +132,7 @@ class Branch2(nn.Module):
             nn.ReLU(),
             nn.Dropout(args.dropout),
             nn.Linear(args.num_channels//2, 24),
+            nn.LayerNorm(24),
             nn.Softmax(dim=1),
         )
         self.v = nn.Sequential(

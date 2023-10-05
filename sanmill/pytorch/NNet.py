@@ -11,6 +11,7 @@ from NeuralNet import NeuralNet
 
 import torch
 import torch.optim as optim
+import torch.nn as nn
 
 from .SanmillNNet import SanmillNNet as snnet
 
@@ -44,7 +45,7 @@ class NNetWrapper(NeuralNet):
                 boards = torch.tensor(boards, dtype=torch.float32)
                 target_pis = torch.tensor(pis, dtype=torch.float32)
                 target_vs = torch.tensor(vs, dtype=torch.float32)
-                periods = torch.tensor(periods, dtype=torch.int8)
+                periods = torch.tensor(periods, dtype=torch.int)
 
                 # predict
                 if self.args.cuda:
@@ -55,6 +56,7 @@ class NNetWrapper(NeuralNet):
                     periods = periods.contiguous().cuda()
 
                 # compute output
+                target_pis += 1e-8
                 out_pi = torch.zeros(target_pis.size()).cuda()
                 out_v = torch.zeros(target_vs.size()).cuda()
                 for i in range(5):
@@ -73,6 +75,7 @@ class NNetWrapper(NeuralNet):
                 # compute gradient and do SGD step
                 optimizer.zero_grad()
                 total_loss.backward()
+                nn.utils.clip_grad_norm_(self.nnet.parameters(), 1.1)
                 optimizer.step()
 
     def predict(self, canonicalBoard):
