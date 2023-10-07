@@ -94,11 +94,24 @@ def playGames(arena_args, num, verbose=False, num_workers=2):
     oneWon = 0
     twoWon = 0
     draws = 0
-    if verbose:
+    if verbose or num_workers == 0:
         for i in range(num):
-            arena_wrapper(arena_args, verbose, 2*i)
-            arena_args[0], arena_args[1] = arena_args[1], arena_args[0]
-            arena_wrapper(arena_args, verbose, 2*i+1)
+            gameResult = arena_wrapper(arena_args, verbose, i)
+            if gameResult > 1e-4:
+                oneWon += 1
+            elif gameResult < -1e-4:
+                twoWon += 1
+            else:
+                draws += 1
+        arena_args[0], arena_args[1] = arena_args[1], arena_args[0]
+        for i in range(num):
+            gameResult = arena_wrapper(arena_args, verbose, i)
+            if gameResult < -1e-4:
+                oneWon += 1
+            elif gameResult > 1e-4:
+                twoWon += 1
+            else:
+                draws += 1
     else:
         pool = torch.multiprocessing.get_context('spawn').Pool(num_workers)
         pools = []
@@ -126,4 +139,4 @@ def playGames(arena_args, num, verbose=False, num_workers=2):
                     twoWon += 1
                 else:
                     draws += 1
-        return oneWon, twoWon, draws
+    return oneWon, twoWon, draws

@@ -126,6 +126,7 @@ class Coach():
             log.info('NEW/PREV WINS : %f / %f ; DRAWS : %f' % (nwins, pwins, draws))
             if pwins + nwins == 0 or float(nwins) / (pwins + nwins) < self.args.updateThreshold:
                 log.info('REJECTING NEW MODEL')
+                self.nnet.nnet.load_state_dict(self.pnet.nnet.state_dict())
                 self.has_won = False
             else:
                 log.info('ACCEPTING NEW MODEL')
