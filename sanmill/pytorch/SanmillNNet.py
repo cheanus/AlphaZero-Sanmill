@@ -154,7 +154,7 @@ class SanmillNNet(nn.Module):
         s: batch_size x board_x x board_y
         period: 1
         """
-        s = s.view(-1, 1, self.board_x, self.board_y)  # batch_size x 1 x (board_x-4) x (board_y-4)
+        s = s.view(-1, 1, self.board_x, self.board_y)  # batch_size x 1 x board_x x board_y
         s = self.main(s)  # batch_size x num_channels x (board_x-4) x (board_y-4)
         s = s.view(-1, self.args.num_channels, (self.board_x-4)*(self.board_y-4)).permute(0,2,1)  # batch_size x (board_x-4)*(board_y-4) x num_channels
         s, _ = self.attension(s, s, s)  # batch_size x (board_x-4)*(board_y-4) x num_channels
