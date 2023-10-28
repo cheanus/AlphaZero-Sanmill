@@ -60,12 +60,13 @@ class NNetWrapper(NeuralNet):
                 out_pi = torch.zeros(target_pis.size()).cuda()
                 out_v = torch.zeros(target_vs.size()).cuda()
                 for i in range(5):
-                    pi, v = self.nnet(boards[periods==i], i)
-                    out_pi[periods==i] = pi.view(-1, target_pis.size(1))
-                    out_v[periods==i] = v.view(-1)
+                    if (periods==i).any():
+                        pi, v = self.nnet(boards[periods==i], i)
+                        out_pi[periods==i] = pi.view(-1, target_pis.size(1))
+                        out_v[periods==i] = v.view(-1)
                 l_pi = self.loss_pi(target_pis, out_pi)
                 l_v = self.loss_v(target_vs, out_v)
-                total_loss = l_pi + l_v
+                total_loss = l_pi + 10*l_v
 
                 # record loss
                 pi_losses.update(l_pi.item(), boards.size(0))
