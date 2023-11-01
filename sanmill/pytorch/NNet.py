@@ -66,7 +66,7 @@ class NNetWrapper(NeuralNet):
                         out_v[periods==i] = v.view(-1)
                 l_pi = self.loss_pi(target_pis, out_pi)
                 l_v = self.loss_v(target_vs, out_v)
-                total_loss = l_pi + 10*l_v
+                total_loss = l_pi + l_v
 
                 # record loss
                 pi_losses.update(l_pi.item(), boards.size(0))
@@ -76,7 +76,6 @@ class NNetWrapper(NeuralNet):
                 # compute gradient and do SGD step
                 optimizer.zero_grad()
                 total_loss.backward()
-                nn.utils.clip_grad_norm_(self.nnet.parameters(), 1.1)
                 optimizer.step()
 
     def predict(self, canonicalBoard):

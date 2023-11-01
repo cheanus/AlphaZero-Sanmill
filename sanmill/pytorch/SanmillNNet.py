@@ -11,25 +11,30 @@ class Branch03(nn.Module):
         super(Branch03, self).__init__()
         self.args = args
         self.main = nn.Sequential(
+            nn.Linear(args.num_channels, args.num_channels),
             nn.LayerNorm(args.num_channels),
             nn.ReLU(),
-            nn.Linear(args.num_channels, args.num_channels*2),
             nn.Dropout(args.dropout),
-            nn.LayerNorm(args.num_channels*2),
+            nn.Linear(args.num_channels, args.num_channels),
+            nn.LayerNorm(args.num_channels),
             nn.ReLU(),
-            nn.Linear(args.num_channels*2, args.num_channels),
             nn.Dropout(args.dropout),
         )
         self.pi = nn.Sequential(
+            nn.Linear(args.num_channels, args.num_channels//2),
+            nn.LayerNorm(args.num_channels//2),
             nn.ReLU(),
-            nn.Linear(args.num_channels, 24),
+            nn.Dropout(args.dropout),
+            nn.Linear(args.num_channels//2, 24),
             nn.LayerNorm(24),
             nn.LogSoftmax(dim=1),
         )
         self.v = nn.Sequential(
-            nn.LayerNorm(args.num_channels),
+            nn.Linear(args.num_channels, args.num_channels//2),
+            nn.LayerNorm(args.num_channels//2),
             nn.ReLU(),
-            nn.Linear(args.num_channels, 1),
+            nn.Dropout(),
+            nn.Linear(args.num_channels//2, 1),
             nn.Tanh(),
         )
 
@@ -52,25 +57,30 @@ class Branch14(nn.Module):
         self.b = Board()
         self.cache_valids()
         self.main = nn.Sequential(
+            nn.Linear(args.num_channels, args.num_channels),
             nn.LayerNorm(args.num_channels),
             nn.ReLU(),
-            nn.Linear(args.num_channels, args.num_channels*2),
             nn.Dropout(args.dropout),
-            nn.LayerNorm(args.num_channels*2),
+            nn.Linear(args.num_channels, args.num_channels),
+            nn.LayerNorm(args.num_channels),
             nn.ReLU(),
-            nn.Linear(args.num_channels*2, args.num_channels),
             nn.Dropout(args.dropout),
         )
         self.pi = nn.Sequential(
+            nn.Linear(args.num_channels, args.num_channels//2),
+            nn.LayerNorm(args.num_channels//2),
             nn.ReLU(),
-            nn.Linear(args.num_channels, 80),
+            nn.Dropout(args.dropout),
+            nn.Linear(args.num_channels//2, 80),
             nn.LayerNorm(80),
             nn.LogSoftmax(dim=1),
         )
         self.v = nn.Sequential(
-            nn.LayerNorm(args.num_channels),
+            nn.Linear(args.num_channels, args.num_channels//2),
+            nn.LayerNorm(args.num_channels//2),
             nn.ReLU(),
-            nn.Linear(args.num_channels, 1),
+            nn.Dropout(),
+            nn.Linear(args.num_channels//2, 1),
             nn.Tanh(),
         )
 
@@ -95,25 +105,30 @@ class Branch2(nn.Module):
     def __init__(self, args):
         super(Branch2, self).__init__()
         self.main = nn.Sequential(
+            nn.Linear(args.num_channels, args.num_channels),
             nn.LayerNorm(args.num_channels),
             nn.ReLU(),
-            nn.Linear(args.num_channels, args.num_channels*2),
             nn.Dropout(args.dropout),
-            nn.LayerNorm(args.num_channels*2),
+            nn.Linear(args.num_channels, args.num_channels),
+            nn.LayerNorm(args.num_channels),
             nn.ReLU(),
-            nn.Linear(args.num_channels*2, args.num_channels),
             nn.Dropout(args.dropout),
         )
         self.pi = nn.Sequential(
+            nn.Linear(args.num_channels, args.num_channels*2),
+            nn.LayerNorm(args.num_channels*2),
             nn.ReLU(),
-            nn.Linear(args.num_channels, 24*24),
+            nn.Dropout(args.dropout),
+            nn.Linear(args.num_channels*2, 24*24),
             nn.LayerNorm(24*24),
             nn.LogSoftmax(dim=1),
         )
         self.v = nn.Sequential(
-            nn.LayerNorm(args.num_channels),
+            nn.Linear(args.num_channels, args.num_channels//2),
+            nn.LayerNorm(args.num_channels//2),
             nn.ReLU(),
-            nn.Linear(args.num_channels, 1),
+            nn.Dropout(),
+            nn.Linear(args.num_channels//2, 1),
             nn.Tanh(),
         )
     def forward(self, s):
@@ -139,7 +154,11 @@ class SanmillNNet(nn.Module):
         )
         self.attension_b = nn.Parameter(torch.rand(self.board_x*self.board_y, args.num_channels))
         self.attension = nn.MultiheadAttention(args.num_channels, 4, batch_first=True)
-        self.mlp = nn.Linear(self.args.num_channels*self.board_x*self.board_y, self.args.num_channels)
+        self.mlp = nn.Sequential(
+            nn.Linear(self.args.num_channels, self.args.num_channels),
+            nn.LayerNorm(self.args.num_channels)
+        )
+        self.average_pooling = nn.AdaptiveAvgPool1d(1)
         self.branch = nn.ModuleList([Branch03(args), Branch14(args), Branch2(args), Branch03(args), Branch14(args)])
 
     def forward(self, s, period):
@@ -152,7 +171,8 @@ class SanmillNNet(nn.Module):
         s = s.view(-1, self.args.num_channels, self.board_x*self.board_y).permute(0,2,1)  # batch_size x board_x*board_y x num_channels
         s = s + self.attension_b  # batch_size x board_x*board_y x num_channels
         s, w = self.attension(s, s, s)  # batch_size x board_x*board_y x num_channels
-        s = s.reshape(-1, self.args.num_channels*self.board_x*self.board_y)  # batch_size x num_channels*board_x*board_y
-        s = self.mlp(s)  # batch_size x num_channels
+        s = self.mlp(s) + s  # batch_size x board_x*board_y x num_channels
+        s = s.permute(0,2,1)  # batch_size x num_channels x board_x*board_y
+        s = self.average_pooling(s).squeeze(2)  # batch_size x num_channels
         pi, v = self.branch[period](s)
         return pi, v
