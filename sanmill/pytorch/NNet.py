@@ -2,6 +2,7 @@ import os
 import sys
 import time
 
+import random
 import numpy as np
 from tqdm import tqdm
 
@@ -29,6 +30,7 @@ class NNetWrapper(NeuralNet):
         examples: list of examples, each example is of form (board, pi, v, period)
         """
         optimizer = optim.Adam(self.nnet.parameters(), lr=self.args.lr)
+        best_loss, best_epoch = torch.inf, -1
 
         for epoch in range(self.args.epochs):
             print('EPOCH ::: ' + str(epoch + 1))
@@ -36,18 +38,21 @@ class NNetWrapper(NeuralNet):
             pi_losses = AverageMeter()
             v_losses = AverageMeter()
 
-            batch_count = int(len(examples) / self.args.batch_size)
+            random.shuffle(examples)
+            split_idx = int(len(examples)*0.8)
+            train_examples = examples[:split_idx]
+            valid_examples = examples[split_idx:]
+            batch_count = int(len(train_examples) / self.args.batch_size)
 
             t = tqdm(range(batch_count), desc='Training Net')
             for _ in t:
-                sample_ids = np.random.choice(len(examples), size=self.args.batch_size, replace=False)
-                boards, pis, vs, periods = list(zip(*[examples[i] for i in sample_ids]))
+                sample_ids = np.random.choice(len(train_examples), size=self.args.batch_size, replace=False)
+                boards, pis, vs, periods = list(zip(*[train_examples[i] for i in sample_ids]))
                 boards = torch.tensor(boards, dtype=torch.float32)
                 target_pis = torch.tensor(pis, dtype=torch.float32)
                 target_vs = torch.tensor(vs, dtype=torch.float32)
                 periods = torch.tensor(periods, dtype=torch.int)
 
-                # predict
                 if self.args.cuda:
                     # boards, target_pis, target_vs = boards.contiguous().cuda(), target_pis.contiguous().cuda(), target_vs.contiguous().cuda()
                     boards = boards.contiguous().cuda()
@@ -66,7 +71,7 @@ class NNetWrapper(NeuralNet):
                         out_v[periods==i] = v.view(-1)
                 l_pi = self.loss_pi(target_pis, out_pi)
                 l_v = self.loss_v(target_vs, out_v)
-                total_loss = l_pi + l_v
+                total_loss = l_pi + 10*l_v
 
                 # record loss
                 pi_losses.update(l_pi.item(), boards.size(0))
@@ -76,7 +81,43 @@ class NNetWrapper(NeuralNet):
                 # compute gradient and do SGD step
                 optimizer.zero_grad()
                 total_loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.nnet.parameters(), 5)
                 optimizer.step()
+
+            # validation
+            val_loss = self.valid(valid_examples)
+            print(f'Epoch {epoch+1} Validation loss: {val_loss}')
+            if val_loss < best_loss:
+                best_loss = val_loss
+                best_epoch = epoch
+                self.save_checkpoint(folder=self.args.checkpoint, filename='best_epoch.pth.tar')
+        self.load_checkpoint(folder=self.args.checkpoint, filename='best_epoch.pth.tar')
+
+    def valid(self, val_examples):
+        self.nnet.eval()
+        val_dataset = SanmillDataset(val_examples)
+        val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=self.args.batch_size)
+        total_loss = AverageMeter()
+
+        for boards, target_pis, target_vs, periods in tqdm(val_dataloader, desc='Validation Net'):
+            # compute output
+            target_pis += 1e-8
+            if self.args.cuda:
+                boards = boards.contiguous().cuda()
+                target_pis = target_pis.contiguous().cuda()
+                target_vs = target_vs.contiguous().cuda()
+                periods = periods.contiguous().cuda()
+            out_pi = torch.zeros(target_pis.size()).to('cuda')
+            out_v = torch.zeros(target_vs.size()).to('cuda')
+            for i in range(5):
+                if (periods==i).any():
+                    pi, v = self.nnet(boards[periods==i], i)
+                    out_pi[periods==i] = pi.view(-1, target_pis.size(1))
+                    out_v[periods==i] = v.view(-1)
+            l_pi = self.loss_pi(target_pis, out_pi)
+            l_v = self.loss_v(target_vs, out_v)
+            total_loss.update(l_pi.item() + 10*l_v.item(), boards.size(0))
+        return total_loss.avg
 
     def predict(self, canonicalBoard):
         """
