@@ -11,11 +11,11 @@ class Branch03(nn.Module):
         super(Branch03, self).__init__()
         self.args = args
         self.main = nn.Sequential(
-            nn.Linear(args.num_channels, args.num_channels),
-            nn.LayerNorm(args.num_channels),
+            nn.Linear(args.num_channels*9, args.num_channels*2),
+            nn.LayerNorm(args.num_channels*2),
             nn.ReLU(),
             nn.Dropout(args.dropout),
-            nn.Linear(args.num_channels, args.num_channels),
+            nn.Linear(args.num_channels*2, args.num_channels),
             nn.LayerNorm(args.num_channels),
             nn.ReLU(),
             nn.Dropout(args.dropout),
@@ -42,7 +42,7 @@ class Branch03(nn.Module):
         """
         s: batch_size x 512*9
         """
-        s = self.main(s) + s  # batch_size x num_channels
+        s = self.main(s)  # batch_size x num_channels
         pi = torch.ones((s.size()[0], 24*24)).to(device) * -10
         pi[:,:24] = self.pi(s)  # batch_size x 24
         v = self.v(s)  # batch_size x 1
@@ -57,11 +57,11 @@ class Branch14(nn.Module):
         self.b = Board()
         self.cache_valids()
         self.main = nn.Sequential(
-            nn.Linear(args.num_channels, args.num_channels),
-            nn.LayerNorm(args.num_channels),
+            nn.Linear(args.num_channels*9, args.num_channels*2),
+            nn.LayerNorm(args.num_channels*2),
             nn.ReLU(),
             nn.Dropout(args.dropout),
-            nn.Linear(args.num_channels, args.num_channels),
+            nn.Linear(args.num_channels*2, args.num_channels),
             nn.LayerNorm(args.num_channels),
             nn.ReLU(),
             nn.Dropout(args.dropout),
@@ -95,7 +95,7 @@ class Branch14(nn.Module):
         """
         s: batch_size x 512*9
         """
-        s = self.main(s) + s  # batch_size x num_channels
+        s = self.main(s)  # batch_size x num_channels
         pi = torch.ones((s.size()[0], 24*24),dtype=torch.float).to(device) * -10
         pi[:, self.valids] = self.pi(s)
         v = self.v(s)  # batch_size x 1
@@ -105,11 +105,11 @@ class Branch2(nn.Module):
     def __init__(self, args):
         super(Branch2, self).__init__()
         self.main = nn.Sequential(
-            nn.Linear(args.num_channels, args.num_channels),
-            nn.LayerNorm(args.num_channels),
+            nn.Linear(args.num_channels*9, args.num_channels*2),
+            nn.LayerNorm(args.num_channels*2),
             nn.ReLU(),
             nn.Dropout(args.dropout),
-            nn.Linear(args.num_channels, args.num_channels),
+            nn.Linear(args.num_channels*2, args.num_channels),
             nn.LayerNorm(args.num_channels),
             nn.ReLU(),
             nn.Dropout(args.dropout),
@@ -135,7 +135,7 @@ class Branch2(nn.Module):
         """
         s: batch_size x 512*9
         """
-        s = self.main(s) + s  # batch_size x num_channels
+        s = self.main(s)  # batch_size x num_channels
         pi = self.pi(s)  # batch_size x 24*24
         v = self.v(s)  # batch_size x 1
         return pi, v
@@ -158,7 +158,11 @@ class SanmillNNet(nn.Module):
             nn.Linear(self.args.num_channels, self.args.num_channels),
             nn.LayerNorm(self.args.num_channels)
         )
-        self.average_pooling = nn.AdaptiveAvgPool1d(1)
+        self.conv = nn.Sequential(
+            nn.Conv2d(args.num_channels, args.num_channels, 3, stride=2),
+            nn.BatchNorm2d(args.num_channels),
+            nn.ReLU(),
+        )
         self.branch = nn.ModuleList([Branch03(args), Branch14(args), Branch2(args), Branch03(args), Branch14(args)])
 
     def forward(self, s, period):
@@ -172,7 +176,8 @@ class SanmillNNet(nn.Module):
         s = s + self.attension_b  # batch_size x board_x*board_y x num_channels
         s, w = self.attension(s, s, s)  # batch_size x board_x*board_y x num_channels
         s = self.mlp(s) + s  # batch_size x board_x*board_y x num_channels
-        s = s.permute(0,2,1)  # batch_size x num_channels x board_x*board_y
-        s = self.average_pooling(s).squeeze(2)  # batch_size x num_channels
+        s = s.permute(0,2,1).view(-1, self.args.num_channels, self.board_x, self.board_y)  # batch_size x num_channels x board_x x board_y
+        s = self.conv(s)  # batch_size x num_channels x 3 x 3
+        s = s.reshape(-1, self.args.num_channels*9)  # batch_size x num_channels*9
         pi, v = self.branch[period](s)
         return pi, v

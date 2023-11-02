@@ -19,17 +19,16 @@ from .SanmillNNet import SanmillNNet as snnet
 class NNetWrapper(NeuralNet):
     def __init__(self, game, args):
         self.args = args
-        self.nnet = snnet(game, args)
         self.board_x, self.board_y = game.getBoardSize()
-
+        self.nnet = snnet(game, args)
         if args.cuda:
             self.nnet.cuda()
+        self.optimizer = optim.Adam(self.nnet.parameters(), lr=self.args.lr)
 
     def train(self, examples):
         """
         examples: list of examples, each example is of form (board, pi, v, period)
         """
-        optimizer = optim.Adam(self.nnet.parameters(), lr=self.args.lr)
         best_loss, best_epoch = torch.inf, -1
 
         for epoch in range(self.args.epochs):
@@ -79,10 +78,10 @@ class NNetWrapper(NeuralNet):
                 t.set_postfix(Loss_pi=pi_losses, Loss_v=v_losses)
 
                 # compute gradient and do SGD step
-                optimizer.zero_grad()
+                self.optimizer.zero_grad()
                 total_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.nnet.parameters(), 5)
-                optimizer.step()
+                self.optimizer.step()
 
             # validation
             val_loss = self.valid(valid_examples)
@@ -156,18 +155,24 @@ class NNetWrapper(NeuralNet):
     def loss_v(self, targets, outputs):
         return torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
 
-    def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
+    def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar', optimizer=True):
         filepath = os.path.join(folder, filename)
         if not os.path.exists(folder):
             print("Checkpoint Directory does not exist! Making directory {}".format(folder))
             os.mkdir(folder)
         else:
             print("Checkpoint Directory exists! ")
-        torch.save({
-            'state_dict': self.nnet.state_dict(),
-        }, filepath)
+        if optimizer:
+            torch.save({
+                'state_dict': self.nnet.state_dict(),
+                'optimizer': self.optimizer.state_dict(),
+            }, filepath)
+        else:
+            torch.save({
+                'state_dict': self.nnet.state_dict(),
+            }, filepath)
 
-    def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
+    def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar', optimizer=True):
         # https://github.com/pytorch/examples/blob/master/imagenet/main.py#L98
         filepath = os.path.join(folder, filename)
         if not os.path.exists(filepath):
@@ -177,3 +182,5 @@ class NNetWrapper(NeuralNet):
         map_location = None if self.args.cuda else 'cpu'
         checkpoint = torch.load(filepath, map_location=map_location)
         self.nnet.load_state_dict(checkpoint['state_dict'])
+        if optimizer:
+            self.optimizer.load_state_dict(checkpoint['optimizer'])
