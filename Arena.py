@@ -79,7 +79,7 @@ def arena_wrapper(arena_args, verbose, i):
 def error_callback(error):
     print(f"Error info: {error}")
 
-def playGames(arena_args, num, verbose=False, num_workers=2):
+def playGames(arena_args, num, verbose=False):
     """
     Plays num games in which player1 starts num/2 games and player2 starts
     num/2 games.
@@ -94,49 +94,21 @@ def playGames(arena_args, num, verbose=False, num_workers=2):
     oneWon = 0
     twoWon = 0
     draws = 0
-    if verbose or num_workers == 0:
-        for i in range(num):
-            gameResult = arena_wrapper(arena_args, verbose, i)
-            if gameResult > 1e-4:
-                oneWon += 1
-            elif gameResult < -1e-4:
-                twoWon += 1
-            else:
-                draws += 1
-        arena_args[0], arena_args[1] = arena_args[1], arena_args[0]
-        for i in range(num):
-            gameResult = arena_wrapper(arena_args, verbose, i)
-            if gameResult < -1e-4:
-                oneWon += 1
-            elif gameResult > 1e-4:
-                twoWon += 1
-            else:
-                draws += 1
-    else:
-        pool = torch.multiprocessing.get_context('spawn').Pool(num_workers)
-        pools = []
-        for i in range(num):
-            pools.append(pool.apply_async(func=arena_wrapper, args=(arena_args, verbose, i), error_callback=error_callback))
-        arena_args[0], arena_args[1] = arena_args[1], arena_args[0]
-        for i in range(num):
-            pools.append(pool.apply_async(func=arena_wrapper, args=(arena_args, verbose, i), error_callback=error_callback))
-        pool.close()
-        pool.join()
-
-        for i, res in enumerate(pools):
-            gameResult = res.get()
-            if i < num:
-                if gameResult > 1e-4:
-                    oneWon += 1
-                elif gameResult < -1e-4:
-                    twoWon += 1
-                else:
-                    draws += 1
-            else:
-                if gameResult < -1e-4:
-                    oneWon += 1
-                elif gameResult > 1e-4:
-                    twoWon += 1
-                else:
-                    draws += 1
+    for i in range(num):
+        gameResult = arena_wrapper(arena_args, verbose, i)
+        if gameResult > 1e-4:
+            oneWon += 1
+        elif gameResult < -1e-4:
+            twoWon += 1
+        else:
+            draws += 1
+    arena_args[0], arena_args[1] = arena_args[1], arena_args[0]
+    for i in range(num):
+        gameResult = arena_wrapper(arena_args, verbose, i)
+        if gameResult < -1e-4:
+            oneWon += 1
+        elif gameResult > 1e-4:
+            twoWon += 1
+        else:
+            draws += 1
     return oneWon, twoWon, draws
