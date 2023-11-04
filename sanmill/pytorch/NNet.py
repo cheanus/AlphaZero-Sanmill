@@ -70,7 +70,7 @@ class NNetWrapper(NeuralNet):
                         out_v[periods==i] = v.view(-1)
                 l_pi = self.loss_pi(target_pis, out_pi)
                 l_v = self.loss_v(target_vs, out_v)
-                total_loss = l_pi + 10*l_v
+                total_loss = l_pi + l_v
 
                 # record loss
                 pi_losses.update(l_pi.item(), boards.size(0))
@@ -115,7 +115,7 @@ class NNetWrapper(NeuralNet):
                     out_v[periods==i] = v.view(-1)
             l_pi = self.loss_pi(target_pis, out_pi)
             l_v = self.loss_v(target_vs, out_v)
-            total_loss.update(l_pi.item() + 10*l_v.item(), boards.size(0))
+            total_loss.update(l_pi.item() + l_v.item(), boards.size(0))
         return total_loss.avg
 
     def predict(self, canonicalBoard):
