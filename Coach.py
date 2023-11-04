@@ -8,12 +8,61 @@ from random import shuffle
 
 import numpy as np
 from tqdm import tqdm
+from torch.multiprocessing import Process, Queue
+import torch.multiprocessing as mp
 
 from Arena import Arena, playGames
 from MCTS import MCTS
 
 log = logging.getLogger(__name__)
 
+def executeEpisode(game, mcts, args):
+    """
+    This function executes one episode of self-play, starting with player 1.
+    As the game is played, each turn is added as a training example to
+    trainExamples. The game is played till the game ends. After the game
+    ends, the outcome of the game is used to assign values to each example
+    in trainExamples.
+
+    It uses a temp=1 if episodeStep < tempThreshold, and thereafter
+    uses temp=0.
+
+    Returns:
+        trainExamples: a list of examples of the form (canonicalBoard, currPlayer, pi,v)
+                        pi is the MCTS informed policy vector, v is +1 if
+                        the player eventually won the game, else -1.
+    """
+    trainExamples = []
+    board = game.getInitBoard()
+    curPlayer = 1
+    episodeStep = 0
+
+    while True:
+        episodeStep += 1
+        canonicalBoard = game.getCanonicalForm(board, curPlayer)
+        temp = int(episodeStep < args.tempThreshold)
+
+        pi = mcts.getActionProb(canonicalBoard, temp=temp)
+        sym = game.getSymmetries(canonicalBoard, pi)
+        if canonicalBoard.period == 2 and canonicalBoard.count(1) > 3:
+            real_period = 4
+        else:
+            real_period = canonicalBoard.period
+        for b, p in sym:
+            trainExamples.append([b, curPlayer, p, real_period])
+
+        action = np.random.choice(len(pi), p=pi)
+        board, curPlayer = game.getNextState(board, curPlayer, action)
+
+        r = game.getGameEnded(board, curPlayer)
+
+        if r != 0:
+            return [(x[0], x[2], r * ((-1) ** (x[1] != curPlayer)), x[3]) for x in trainExamples]
+
+def executeEpisodeParallel(game, nnet, args, queue, num):
+    for _ in range(num):
+        mcts = MCTS(game, nnet, args)  # reset search tree
+        queue.put(executeEpisode(game, mcts, args))
 
 class Coach():
     """
@@ -30,49 +79,8 @@ class Coach():
         self.trainExamplesHistory = []  # history of examples from args.numItersForTrainExamplesHistory latest iterations
         self.skipFirstSelfPlay = False  # can be overriden in loadTrainExamples()
         self.has_won = True
+        mp.set_start_method('spawn')
 
-    def executeEpisode(self):
-        """
-        This function executes one episode of self-play, starting with player 1.
-        As the game is played, each turn is added as a training example to
-        trainExamples. The game is played till the game ends. After the game
-        ends, the outcome of the game is used to assign values to each example
-        in trainExamples.
-
-        It uses a temp=1 if episodeStep < tempThreshold, and thereafter
-        uses temp=0.
-
-        Returns:
-            trainExamples: a list of examples of the form (canonicalBoard, currPlayer, pi,v)
-                           pi is the MCTS informed policy vector, v is +1 if
-                           the player eventually won the game, else -1.
-        """
-        trainExamples = []
-        board = self.game.getInitBoard()
-        self.curPlayer = 1
-        episodeStep = 0
-
-        while True:
-            episodeStep += 1
-            canonicalBoard = self.game.getCanonicalForm(board, self.curPlayer)
-            temp = int(episodeStep < self.args.tempThreshold)
-
-            pi = self.mcts.getActionProb(canonicalBoard, temp=temp)
-            sym = self.game.getSymmetries(canonicalBoard, pi)
-            if canonicalBoard.period == 2 and canonicalBoard.count(1) > 3:
-                real_period = 4
-            else:
-                real_period = canonicalBoard.period
-            for b, p in sym:
-                trainExamples.append([b, self.curPlayer, p, real_period])
-
-            action = np.random.choice(len(pi), p=pi)
-            board, self.curPlayer = self.game.getNextState(board, self.curPlayer, action)
-
-            r = self.game.getGameEnded(board, self.curPlayer)
-
-            if r != 0:
-                return [(x[0], x[2], r * ((-1) ** (x[1] != self.curPlayer)), x[3]) for x in trainExamples]
 
     def learn(self):
         """
@@ -90,9 +98,27 @@ class Coach():
             if not self.skipFirstSelfPlay or i > 1:
                 iterationTrainExamples = deque([], maxlen=self.args.maxlenOfQueue)
 
-                for _ in tqdm(range(self.args.numEps), desc="Self Play"):
-                    self.mcts = MCTS(self.game, self.nnet, self.args)  # reset search tree
-                    iterationTrainExamples += self.executeEpisode()
+                example_queue = Queue()
+                process_list = []
+                process_numEps = self.args.numEps // self.args.num_processes
+                for _ in range(self.args.num_processes):
+                    p = Process(target=executeEpisodeParallel,
+                                args=(self.game, self.nnet, self.args, example_queue, process_numEps))
+                    p.start()
+                    process_list.append(p)
+
+                with tqdm(total=self.args.numEps, desc='Self Play') as pbar:
+                    self_play_sum = 0
+                    while self_play_sum < self.args.numEps:
+                        if not example_queue.empty():
+                            iterationTrainExamples += example_queue.get()
+                            pbar.update()
+                            self_play_sum += 1
+
+                # close
+                for p in process_list:
+                    p.terminate()
+                example_queue.close()
 
                 # save the iteration examples to the history 
                 self.trainExamplesHistory.append(list(iterationTrainExamples))

@@ -25,7 +25,7 @@ args = dotdict({
     'load_model': False,
     'load_folder_file': ('temp/','best.pth.tar'),
     'numItersForTrainExamplesHistory': 20,
-    'num_workers': 0,
+    'num_processes': 1,
 
     'lr': 0.004,
     'dropout': 0.3,
