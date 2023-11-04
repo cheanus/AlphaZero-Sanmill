@@ -132,20 +132,20 @@ class SanmillGame():
                small non-zero value for draw.
                
         """
+        reward = 0
         if board.period in [0, 3]:
-            return 0
+            reward = 0
         elif board.put_pieces >= self.num_draw:
-            return 1e-4
+            reward = 1e-4
         elif not board.has_legal_moves(player):
-            return -1 * self.reward_w_func(board.put_pieces)
+            reward = -1*self.reward_w_func(board.put_pieces) + 0.03*(board.count(player)-board.count(-player))
         elif board.period == 2 and board.count(player) < 3:
-            return -1 * self.reward_w_func(board.put_pieces)
+            reward = -1*self.reward_w_func(board.put_pieces) + 0.03*(board.count(player)-board.count(-player))
         elif not board.has_legal_moves(-player):
-            return 1 * self.reward_w_func(board.put_pieces)
+            reward = 1*self.reward_w_func(board.put_pieces) + 0.03*(board.count(player)-board.count(-player))
         elif board.period == 2 and board.count(-player) < 3:
-            return 1 * self.reward_w_func(board.put_pieces)
-        else:
-            return 0
+            reward = 1*self.reward_w_func(board.put_pieces) + 0.03*(board.count(player)-board.count(-player))
+        return min(max(reward, -1), 1)
 
     def getCanonicalForm(self, board, player):
         """
