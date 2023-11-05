@@ -6,6 +6,7 @@ from sanmill.pytorch.NNet import NNetWrapper as NNet
 
 
 import torch
+import torch.multiprocessing as mp
 from utils import *
 
 """
@@ -29,7 +30,11 @@ if __name__ == '__main__':
         'batch_size': 128,
         'cuda': torch.cuda.is_available(),
         'num_channels': 512,
+        'num_processes': 0,
     })
+
+    if args.num_processes > 1:
+        mp.set_start_method('spawn')
 
     # nnet players
     n1 = NNet(g, args)

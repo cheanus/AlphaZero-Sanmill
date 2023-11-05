@@ -1,5 +1,6 @@
 import logging
 import torch
+import torch.multiprocessing as mp
 import coloredlogs
 
 from Coach import Coach
@@ -48,6 +49,9 @@ def main():
         nnet.load_checkpoint(args.load_folder_file[0], args.load_folder_file[1])
     else:
         log.warning('Not loading a checkpoint!')
+
+    if args.num_processes > 1:
+        mp.set_start_method('spawn')
 
     log.info('Loading the Coach...')
     c = Coach(g, nnet, args)

@@ -4,7 +4,6 @@ import torch
 from tqdm import tqdm
 from MCTS import MCTS
 from torch.multiprocessing import Process, Queue
-import torch.multiprocessing as mp
 
 log = logging.getLogger(__name__)
 
@@ -78,11 +77,16 @@ def arena_wrapper(arena_args, verbose, i):
     print(f'End fighting {i}, result {reselts}')
     return reselts
 
-def arena_wrapper_parallel(arena_args, verbose, num, is_oneplayer, results_queue):
-    for i in range(num):
-        results_queue.put((is_oneplayer, arena_wrapper(arena_args, verbose, i)))
+def arena_wrapper_parallel(arena_args, verbose, num, results_queue):
+    for i in range(num//2):
+        res = arena_wrapper(arena_args, verbose, i)
+        results_queue.put((0, res))
+    arena_args[0], arena_args[1] = arena_args[1], arena_args[0]
+    for i in range(num//2):
+        res = arena_wrapper(arena_args, verbose, i)
+        results_queue.put((1, res))
 
-def playGames(arena_args, num, verbose=False, num_processes=2):
+def playGames(arena_args, num, verbose=False, num_processes=0):
     """
     Plays num games in which player1 starts num/2 games and player2 starts
     num/2 games.
@@ -92,13 +96,13 @@ def playGames(arena_args, num, verbose=False, num_processes=2):
         twoWon: games won by player2
         draws:  games won by nobody
     """
-    mp.set_start_method('spawn')
+    assert num_processes == 0 or num % (num_processes*2) == 0 and num >= num_processes*2
 
-    num = int(num / 2)
     oneWon = 0
     twoWon = 0
     draws = 0
     if verbose or num_processes == 0:
+        num = num // 2
         for i in range(num):
             gameResult = arena_wrapper(arena_args, verbose, i)
             if gameResult > 1e-4:
@@ -119,20 +123,17 @@ def playGames(arena_args, num, verbose=False, num_processes=2):
     else:
         process_list = []
         results_queue = Queue()
-        p = Process(target=arena_wrapper_parallel, args=(arena_args, verbose, num, 0, results_queue))
-        p.start()
-        process_list.append(p)
-        arena_args[0], arena_args[1] = arena_args[1], arena_args[0]
-        p = Process(target=arena_wrapper_parallel, args=(arena_args, verbose, num, 1, results_queue))
-        p.start()
-        process_list.append(p)
+        for _ in range(num_processes):
+            p = Process(target=arena_wrapper_parallel, args=(arena_args, verbose, num//num_processes, results_queue))
+            p.start()
+            process_list.append(p)
 
         for p in process_list:
             p.join()
 
-        for _ in range(2*num):
-            i, gameResult = results_queue.get()
-            if i == 0:
+        for _ in range(num):
+            is_oneplayer_first, gameResult = results_queue.get()
+            if is_oneplayer_first == 0:
                 if gameResult > 1e-4:
                     oneWon += 1
                 elif gameResult < -1e-4:
@@ -146,5 +147,11 @@ def playGames(arena_args, num, verbose=False, num_processes=2):
                     twoWon += 1
                 else:
                     draws += 1
-        del i, gameResult
+
+        # terminate multiprocessing
+        del is_oneplayer_first, gameResult
+        results_queue.close()
+        for p in process_list:
+            p.terminate()
+
     return oneWon, twoWon, draws

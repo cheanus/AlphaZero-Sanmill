@@ -9,7 +9,6 @@ from random import shuffle
 import numpy as np
 from tqdm import tqdm
 from torch.multiprocessing import Process, Queue
-import torch.multiprocessing as mp
 
 from Arena import Arena, playGames
 from MCTS import MCTS
@@ -79,8 +78,6 @@ class Coach():
         self.trainExamplesHistory = []  # history of examples from args.numItersForTrainExamplesHistory latest iterations
         self.skipFirstSelfPlay = False  # can be overriden in loadTrainExamples()
         self.has_won = True
-        mp.set_start_method('spawn')
-
 
     def learn(self):
         """
@@ -122,6 +119,7 @@ class Coach():
 
                 # save the iteration examples to the history 
                 self.trainExamplesHistory.append(list(iterationTrainExamples))
+                del iterationTrainExamples
 
             if len(self.trainExamplesHistory) > self.args.numItersForTrainExamplesHistory:
                 log.warning(
@@ -147,7 +145,7 @@ class Coach():
 
             log.info('PITTING AGAINST PREVIOUS VERSION')
             arena_args = [pmcts, nmcts, self.game, None]
-            pwins, nwins, draws = playGames(arena_args, self.args.arenaCompare)
+            pwins, nwins, draws = playGames(arena_args, self.args.arenaCompare, num_processes=self.args.num_processes)
 
             log.info('NEW/PREV WINS : %f / %f ; DRAWS : %f' % (nwins, pwins, draws))
             if pwins + nwins == 0 or float(nwins) / (pwins + nwins) < self.args.updateThreshold:
