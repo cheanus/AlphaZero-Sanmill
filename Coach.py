@@ -98,7 +98,7 @@ class Coach():
                 example_queue = Queue()
                 process_list = []
                 assert self.args.numEps % self.args.num_processes == 0
-                process_numEps = self.args.numEps / self.args.num_processes
+                process_numEps = self.args.numEps // self.args.num_processes
                 for _ in range(self.args.num_processes):
                     p = Process(target=executeEpisodeParallel,
                                 args=(self.game, self.nnet, self.args, example_queue, process_numEps))
