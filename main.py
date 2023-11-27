@@ -14,26 +14,26 @@ coloredlogs.install(level='INFO')  # Change this to DEBUG to see more info.
 
 args = dotdict({
     'numIters': 100,
-    'numEps': 96,              # Number of complete self-play games to simulate during a new iteration.
+    'numEps': 100,              # Number of complete self-play games to simulate during a new iteration.
     'tempThreshold': 80,        #
-    'updateThreshold': 0.6,     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
+    'updateThreshold': 0.55,     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
     'maxlenOfQueue': 200000,    # Number of game examples to train the neural networks.
-    'numMCTSSims': 25,          # Number of games moves for MCTS to simulate.
-    'arenaCompare': 24,         # Number of games to play during arena play to determine if new net will be accepted.
-    'cpuct': 1,
+    'numMCTSSims': 40,          # Number of games moves for MCTS to simulate.
+    'arenaCompare': 20,         # Number of games to play during arena play to determine if new net will be accepted.
+    'cpuct': 1.5,
 
     'checkpoint': './temp/',
     'load_model': False,
     'load_folder_file': ('temp/','best.pth.tar'),
     'numItersForTrainExamplesHistory': 5,
-    'num_processes': 6,
+    'num_processes': 5,
 
     'lr': 0.002,
     'dropout': 0.3,
     'epochs': 10,
-    'batch_size': 128,
+    'batch_size': 1024,
     'cuda': torch.cuda.is_available(),
-    'num_channels': 512,
+    'num_channels': 256,
 })
 
 

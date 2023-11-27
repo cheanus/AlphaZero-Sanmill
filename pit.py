@@ -27,10 +27,10 @@ if __name__ == '__main__':
         'lr': 0.002,
         'dropout': 0.3,
         'epochs': 10,
-        'batch_size': 128,
+        'batch_size': 1024,
         'cuda': torch.cuda.is_available(),
-        'num_channels': 512,
-        'num_processes': 0,
+        'num_channels': 256,
+        'num_processes': 5,
     })
 
     if args.num_processes > 1:
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     # nnet players
     n1 = NNet(g, args)
     n1.load_checkpoint('./temp','best.pth.tar')
-    args1 = dotdict({'numMCTSSims': 100, 'cpuct':1.0})
+    args1 = dotdict({'numMCTSSims': 1000, 'cpuct':1.5})
     mcts1 = MCTS(g, n1, args1)
     n1p = mcts1
 
@@ -47,8 +47,8 @@ if __name__ == '__main__':
         player2 = hp
     else:
         n2 = NNet(g, args)
-        # n2.load_checkpoint('./temp', 'checkpoint_1.pth.tar')
-        args2 = dotdict({'numMCTSSims': 100, 'cpuct': 1.0})
+        n2.load_checkpoint('./temp','best.pth.tar')
+        args2 = dotdict({'numMCTSSims': 100, 'cpuct': 1.5})
         mcts2 = MCTS(g, n2, args2)
         n2p = mcts2
         player2 = n2p  # Player 2 is neural network if it's cpu vs cpu.
