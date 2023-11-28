@@ -39,7 +39,7 @@ if __name__ == '__main__':
     # nnet players
     n1 = NNet(g, args)
     n1.load_checkpoint('./temp','best.pth.tar')
-    args1 = dotdict({'numMCTSSims': 1000, 'cpuct':1.5})
+    args1 = dotdict({'numMCTSSims': 500, 'cpuct':0.5, 'eat_factor': 2})
     mcts1 = MCTS(g, n1, args1)
     n1p = mcts1
 

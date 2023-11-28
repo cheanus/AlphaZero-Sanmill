@@ -137,6 +137,9 @@ class NNetWrapper(NeuralNet):
         self.nnet.eval()
         with torch.no_grad():
             pi, v = self.nnet(board, real_period)
+            if 'eat_factor' in self.args.keys() and real_period == 3:
+                v = max(min(1, self.args.eat_factor*v), -1)
+                v = torch.tensor([v], dtype=torch.float32)
 
         # print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
         return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
