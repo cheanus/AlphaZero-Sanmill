@@ -18,6 +18,17 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
+class EMA():
+
+    def __init__(self, beta=0.7):
+        self.value = None
+        self.beta = beta
+
+    def update(self, value):
+        if self.value is None:
+            self.value = value
+        else:
+            self.value = self.beta * self.value + (1 - self.beta) * value
 
 class dotdict(dict):
     def __getattr__(self, name):

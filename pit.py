@@ -18,11 +18,6 @@ if __name__ == '__main__':
 
     g = SanmillGame()
 
-    # all players
-    # rp = RandomPlayer(g).play
-    # gp = GreedySanmillPlayer(g).play
-    hp = HumanSanmillPlayer(g)
-
     args = dotdict({
         'lr': 0.002,
         'dropout': 0.3,
@@ -31,7 +26,13 @@ if __name__ == '__main__':
         'cuda': torch.cuda.is_available(),
         'num_channels': 256,
         'num_processes': 5,
+        'difficulty': 0.5,
     })
+
+    # all players
+    # rp = RandomPlayer(g).play
+    # gp = GreedySanmillPlayer(g).play
+    hp = HumanSanmillPlayer(g, args.difficulty)
 
     if args.num_processes > 1:
         mp.set_start_method('spawn')

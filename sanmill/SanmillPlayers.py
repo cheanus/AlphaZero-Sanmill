@@ -14,8 +14,9 @@ class RandomPlayer():
 
 
 class HumanSanmillPlayer():
-    def __init__(self, game):
+    def __init__(self, game, difficulty=0):
         self.game = game
+        self.difficulty = difficulty
 
     def play(self, board):
         # display(board)

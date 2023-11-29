@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from MCTS import MCTS
+from utils import EMA
 from torch.multiprocessing import Process, Queue
 
 log = logging.getLogger(__name__)
@@ -29,10 +30,12 @@ class Arena():
         self.player2 = player2
         self.game = game
         self.display = display
+        self.v_ema = EMA()
 
     def playGame(self, verbose=False):
         """
         Executes one episode of a game.
+        Note: verbose=True also means human vs cpu.
 
         Returns:
             either
@@ -51,8 +54,21 @@ class Arena():
                 print("Turn ", str(it), "Player ", str(curPlayer), "Period ", board.period)
                 self.display(board)
             if type(players[curPlayer + 1]) == MCTS:
-                pi = players[curPlayer + 1].getActionProb(self.game.getCanonicalForm(board, curPlayer), 0)
-                action = np.argmax(pi)
+                if verbose:
+                    pi = players[curPlayer + 1].getActionProb(self.game.getCanonicalForm(board, curPlayer), 1)
+                    _, v = players[curPlayer + 1].nnet.predict(self.game.getCanonicalForm(board, curPlayer))
+                    self.v_ema.update(v)
+                    print(f'Now the board v = {v}, v_ema = {self.v_ema.value}')
+                    pi_sorted = np.sort(pi)
+                    pi_index_sorted = np.argsort(pi)
+                    num_positive = (pi_sorted>0).sum()
+                    num_negative = pi_sorted.shape[0] - num_positive
+                    action_sorted_index = num_negative+int(num_positive*((1-self.v_ema.value)/2+players[1-curPlayer].difficulty))
+                    action_sorted_index = min(max(action_sorted_index, num_negative), len(pi)-1)
+                    action = pi_index_sorted[action_sorted_index]
+                else:
+                    pi = players[curPlayer + 1].getActionProb(self.game.getCanonicalForm(board, curPlayer), 0)
+                    action = np.argmax(pi)
             else:
                 action = players[curPlayer + 1].play(self.game.getCanonicalForm(board, curPlayer))
 
