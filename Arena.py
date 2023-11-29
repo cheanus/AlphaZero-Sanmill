@@ -58,7 +58,7 @@ class Arena():
                     pi = players[curPlayer + 1].getActionProb(self.game.getCanonicalForm(board, curPlayer), 1)
                     _, v = players[curPlayer + 1].nnet.predict(self.game.getCanonicalForm(board, curPlayer))
                     self.v_ema.update(v)
-                    print(f'Now the board v = {v}, v_ema = {self.v_ema.value}')
+                    print(f'For AI, the board v = {v}, v_ema = {self.v_ema.value}')
                     pi_sorted = np.sort(pi)
                     pi_index_sorted = np.argsort(pi)
                     num_positive = (pi_sorted>0).sum()

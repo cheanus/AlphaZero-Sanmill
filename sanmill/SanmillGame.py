@@ -215,7 +215,10 @@ class SanmillGame():
             print(y, "|", end="")    # print the row #
             for x in range(n):
                 piece = board.pieces[y][x]    # get the piece to print
-                print(SanmillGame.square_content[piece], end=" ")
+                if board.allowed_places[x][y] == 1:
+                    print(SanmillGame.square_content[piece], end=" ")
+                else:
+                    print(end="  ")
             print("|")
 
         print("-----------------------")
