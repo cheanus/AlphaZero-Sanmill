@@ -14,9 +14,10 @@
 - 更改reward的计算方式，使其重视步数
 - 忽略loss中对无效action项的计算
 - 在Training的每个epoch后添加Validation步骤
-- 使用类似于ViT transformer的结构作为backbone
+- 使用类似于Vision Transformer的结构作为backbone
 - 优化并丰富了终端输出的信息
 - 调整了MCTS以适配直棋规则
+- 引入基于指数移动平均（EMA）的对弈时难度动态自平衡机制
 
 ## 环境
 本项目使用了以下第三方库：
